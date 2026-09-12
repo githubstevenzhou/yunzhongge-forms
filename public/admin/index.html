@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>后台管理 - 云中阁信息收集</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#f1f5f9;color:#1e293b;font-size:14px}
+    a{color:#2563eb;text-decoration:none}
+    button{cursor:pointer;font-family:inherit}
+
+    /* 顶栏 */
+    .topbar{height:56px;background:#1e293b;color:#fff;display:flex;align-items:center;padding:0 24px;justify-content:space-between;position:sticky;top:0;z-index:50}
+    .topbar .brand{font-size:16px;font-weight:600}
+    .topbar .right{font-size:13px;color:#94a3b8}
+    .topbar .right button{background:transparent;color:#cbd5e1;border:1px solid #475569;padding:5px 14px;border-radius:6px;margin-left:10px;font-size:13px}
+    .topbar .right button:hover{background:#334155}
+
+    .wrap{max-width:1100px;margin:0 auto;padding:28px 24px}
+
+    /* 卡片 / 列表 */
+    .panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}
+    .panel-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e2e8f0}
+    .panel-head h2{margin:0;font-size:17px}
+    .toolbar{display:flex;gap:10px;align-items:center}
+
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:14px;color:#334155}
+    .btn:hover{background:#f8fafc}
+    .btn-primary{background:#3b82f6;border-color:#3b82f6;color:#fff}
+    .btn-primary:hover{background:#2563eb}
+    .btn-danger{background:#ef4444;border-color:#ef4444;color:#fff}
+    .btn-danger:hover{background:#dc2626}
+    .btn-sm{padding:5px 10px;font-size:12px}
+
+    /* 表单卡片网格 */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;padding:20px}
+    .card{border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#fff;transition:box-shadow .15s}
+    .card:hover{box-shadow:0 6px 20px rgba(0,0,0,.08)}
+    .card .kv{aspect-ratio:16/9;background:#e2e8f0 center/cover no-repeat;position:relative}
+    .card .kv .none{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px}
+    .card .body{padding:14px}
+    .card .name{font-size:15px;font-weight:600;margin:0 0 6px;word-break:break-all}
+    .card .meta{color:#64748b;font-size:12px;margin:0 0 12px}
+    .card .actions{display:flex;gap:8px;flex-wrap:wrap}
+
+    .empty{padding:60px 20px;text-align:center;color:#94a3b8}
+    .empty .big{font-size:42px;margin-bottom:8px}
+
+    /* 登录页 */
+    .login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e293b,#0f172a)}
+    .login-box{background:#fff;padding:40px;border-radius:14px;width:360px;max-width:92%;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+    .login-box h1{margin:0 0 6px;font-size:22px;text-align:center}
+    .login-box .tip{text-align:center;color:#64748b;font-size:13px;margin:0 0 24px}
+    .login-box label{display:block;font-size:13px;margin:14px 0 6px;color:#475569}
+    .login-box input{width:100%;height:42px;border:1px solid #cbd5e1;border-radius:8px;padding:0 12px;font-size:14px}
+    .login-box input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+    .login-box button{width:100%;height:44px;margin-top:22px;border:none;border-radius:8px;background:#3b82f6;color:#fff;font-size:15px}
+    .login-box button:disabled{background:#94a3b8}
+    .login-err{color:#ef4444;font-size:13px;margin-top:10px;text-align:center;min-height:18px}
+
+    /* 模态框 */
+    .mask{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal{background:#fff;border-radius:14px;width:480px;max-width:92%;max-height:92vh;overflow:auto}
+    .modal .head{padding:18px 22px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}
+    .modal .head h3{margin:0;font-size:17px}
+    .modal .head .x{border:none;background:transparent;font-size:22px;color:#94a3b8;line-height:1}
+    .modal .body{padding:22px}
+    .modal label{display:block;font-size:13px;margin:16px 0 6px;color:#475569;font-weight:500}
+    .modal label .req{color:#ef4444}
+    .modal input[type=text]{width:100%;height:42px;border:1px solid #cbd5e1;border-radius:8px;padding:0 12px;font-size:14px}
+    .modal input[type=file]{width:100%}
+    .modal .kv-preview{margin-top:10px;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0}
+    .modal .kv-preview img{display:block;width:100%;height:auto}
+    .modal .hint{color:#94a3b8;font-size:12px;margin-top:6px}
+    .modal .foot{padding:16px 22px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px}
+
+    /* 提交记录表 */
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #e2e8f0;font-size:13px;vertical-align:top}
+    th{background:#f8fafc;color:#64748b;font-weight:600;position:sticky;top:0}
+    tr:hover td{background:#f8fafc}
+    .thumb{width:54px;height:40px;border-radius:4px;object-fit:cover;border:1px solid #e2e8f0;cursor:pointer;display:block}
+    .sub-table{overflow:auto}
+    .stat{display:flex;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+    .stat .item{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 20px;flex:1;min-width:140px}
+    .stat .num{font-size:24px;font-weight:700;color:#1e293b}
+    .stat .lbl{font-size:12px;color:#64748b;margin-top:2px}
+    .slug-box{display:flex;align-items:center;gap:8px;background:#f1f5f9;padding:10px 14px;border-radius:8px;word-break:break-all}
+    .slug-box code{font-family:monospace;font-size:13px;color:#1e293b;flex:1}
+
+    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:flex;align-items:center;justify-content:center;padding:30px;cursor:zoom-out}
+    .lightbox img{max-width:92%;max-height:92%;border-radius:8px}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid #cbd5e1;border-top-color:#3b82f6;border-radius:50%;animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+    // token 持久化
+    const TOKEN_KEY = 'yzg_admin_token';
+    const getToken = () => localStorage.getItem(TOKEN_KEY);
+    const setToken = (t) => t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY);
+
+    function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+    async function api(path, opts = {}) {
+      const token = getToken();
+      const headers = { ...(opts.headers || {}) };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      let body = opts.body;
+      // FormData 不设置 Content-Type，让浏览器自动加 boundary
+      if (opts.json) {
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(opts.json);
+      }
+      const res = await fetch(path, { ...opts, headers, body });
+      const isJson = (res.headers.get('content-type') || '').includes('application/json');
+      const data = isJson ? await res.json() : await res.text();
+      if (!res.ok) {
+        const msg = (data && data.error) || `请求失败 (${res.status})`;
+        const err = new Error(msg);
+        err.status = res.status;
+        err.data = data;
+        throw err;
+      }
+      return data;
+    }
+
+    function route() {
+      const hash = location.hash.replace(/^#/, '') || '/';
+      const app = $('#app');
+      if (hash.startsWith('/login')) return renderLogin(app);
+      if (!getToken()) { location.hash = '/login'; return; }
+      if (hash === '/' || hash === '') return renderDashboard(app);
+      const m = hash.match(/^\/forms\/(\d+)/);
+      if (m) return renderFormDetail(app, m[1]);
+      location.hash = '/';
+    }
+
+    window.addEventListener('hashchange', route);
+
+    /* ---------- 登录 ---------- */
+    function renderLogin(app) {
+      app.innerHTML = `
+        <div class="login">
+          <form class="login-box" id="loginForm">
+            <h1>后台登录</h1>
+            <p class="tip">云中阁信息收集平台</p>
+            <label>用户名</label>
+            <input type="text" name="username" required autocomplete="username" placeholder="admin" />
+            <label>密码</label>
+            <input type="password" name="password" required autocomplete="current-password" placeholder="请输入密码" />
+            <div class="login-err" id="loginErr"></div>
+            <button type="submit" id="loginBtn">登 录</button>
+          </form>
+        </div>`;
+      $('#loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = $('#loginErr');
+        const btn = $('#loginBtn');
+        errEl.textContent = '';
+        btn.disabled = true; btn.textContent = '登录中…';
+        try {
+          const fd = new FormData(e.target);
+          const res = await api('/api/auth/login', {
+            method: 'POST',
+            json: { username: fd.get('username'), password: fd.get('password') },
+          });
+          setToken(res.token);
+          location.hash = '/';
+        } catch (err) {
+          errEl.textContent = err.message;
+        } finally {
+          btn.disabled = false; btn.textContent = '登 录';
+        }
+      });
+    }
+
+    function logout() {
+      setToken(null);
+      location.hash = '/login';
+    }
+
+    /* ---------- Dashboard ---------- */
+    async function renderDashboard(app) {
+      app.innerHTML = `
+        <div class="topbar">
+          <div class="brand">云中阁 · 后台管理</div>
+          <div class="right"><button id="logoutBtn">退出登录</button></div>
+        </div>
+        <div class="wrap">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>表单列表</h2>
+              <div class="toolbar"><button class="btn btn-primary" id="newBtn">+ 创建表单</button></div>
+            </div>
+            <div id="formsArea"><div class="empty"><div class="spinner"></div> 加载中…</div></div>
+          </div>
+        </div>`;
+      $('#logoutBtn').addEventListener('click', logout);
+      $('#newBtn').addEventListener('click', () => openCreateModal());
+      try {
+        const { items } = await api('/api/admin/forms');
+        renderFormsList(items || []);
+      } catch (err) {
+        if (err.status === 401) { logout(); return; }
+        $('#formsArea').innerHTML = `<div class="empty">加载失败：${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderFormsList(items) {
+      const area = $('#formsArea');
+      if (!items.length) {
+        area.innerHTML = `<div class="empty"><div class="big">+</div><div>还没有表单，点击右上角创建第一个</div></div>`;
+        return;
+      }
+      area.innerHTML = `<div class="grid">${items.map(f => `
+        <div class="card">
+          <div class="kv" style="${f.kv_image_url ? `background-image:url('${escapeHtml(f.kv_image_url)}')` : ''}">
+            ${f.kv_image_url ? '' : '<div class="none">无 KV 图</div>'}
+          </div>
+          <div class="body">
+            <div class="name">${escapeHtml(f.name)}</div>
+            <div class="meta">创建于 ${escapeHtml(f.created_at)}</div>
+            <div class="actions">
+              <button class="btn btn-sm" data-act="open" data-id="${f.id}">查看</button>
+              <button class="btn btn-sm" data-act="copy" data-slug="${escapeHtml(f.slug)}">复制链接</button>
+              <button class="btn btn-sm btn-danger" data-act="del" data-id="${f.id}" data-name="${escapeHtml(f.name)}">删除</button>
+            </div>
+          </div>
+        </div>`).join('')}</div>`;
+
+      area.querySelectorAll('[data-act="open"]').forEach(b => b.addEventListener('click', () => {
+        location.hash = `/forms/${b.dataset.id}`;
+      }));
+      area.querySelectorAll('[data-act="copy"]').forEach(b => b.addEventListener('click', async () => {
+        const url = `${location.origin}/f/${b.dataset.slug}`;
+        try {
+          await navigator.clipboard.writeText(url);
+          toast('已复制：' + url);
+        } catch {
+          prompt('请复制链接：', url);
+        }
+      }));
+      area.querySelectorAll('[data-act="del"]').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm(`确认删除表单「${b.dataset.name}」？该操作会同时删除所有提交记录和图片，不可恢复。`)) return;
+        try {
+          await api(`/api/admin/forms/${b.dataset.id}`, { method: 'DELETE' });
+          route();
+        } catch (err) { toast(err.message, true); }
+      }));
+    }
+
+    /* ---------- 创建/编辑表单模态 ---------- */
+    function openCreateModal() {
+      const mask = document.createElement('div');
+      mask.className = 'mask';
+      mask.innerHTML = `
+        <div class="modal">
+          <div class="head"><h3>创建表单</h3><button class="x">×</button></div>
+          <div class="body">
+            <label>表单名称<span class="req">*</span></label>
+            <input type="text" id="m_name" maxlength="60" placeholder="例如：2026 春节福利信息登记" />
+            <label>KV 图（16:9，必填）<span class="req">*</span></label>
+            <input type="file" id="m_kv" accept="image/jpeg,image/png,image/webp" />
+            <div class="hint">必须为 16:9 比例，建议宽度 ≥ 640px，支持 JPG/PNG/WebP</div>
+            <div class="kv-preview" id="m_kv_preview" style="display:none"><img id="m_kv_img" /></div>
+            <div class="login-err" id="m_err"></div>
+          </div>
+          <div class="foot">
+            <button class="btn" id="m_cancel">取消</button>
+            <button class="btn btn-primary" id="m_ok">创建</button>
+          </div>
+        </div>`;
+      document.body.appendChild(mask);
+      const close = () => mask.remove();
+      mask.querySelector('.x').addEventListener('click', close);
+      $('#m_cancel').addEventListener('click', close);
+      mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
+
+      const kvInput = $('#m_kv');
+      // 记录校验通过的文件，避免被驳回后仍提交旧值
+      let validatedKvFile = null;
+      const checkRatio = (file) => new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const ok = Math.abs(img.naturalWidth / img.naturalHeight - 16 / 9) < 0.04 && img.naturalWidth >= 320;
+          resolve({ ok, w: img.naturalWidth, h: img.naturalHeight });
+        };
+        img.onerror = () => resolve({ ok: false });
+        img.src = URL.createObjectURL(file);
+      });
+      kvInput.addEventListener('change', async () => {
+        const f = kvInput.files[0];
+        validatedKvFile = null;
+        const errEl = $('#m_err'); errEl.textContent = '';
+        if (!f) { $('#m_kv_preview').style.display = 'none'; return; }
+        const url = URL.createObjectURL(f);
+        $('#m_kv_img').src = url;
+        $('#m_kv_preview').style.display = 'block';
+        const { ok, w, h } = await checkRatio(f);
+        if (!ok) {
+          errEl.textContent = `KV 图比例不符合 16:9（当前 ${w}×${h}），请重新选择`;
+          kvInput.value = '';
+          $('#m_kv_preview').style.display = 'none';
+          return;
+        }
+        validatedKvFile = f;
+      });
+
+      $('#m_ok').addEventListener('click', async () => {
+        const name = $('#m_name').value.trim();
+        const errEl = $('#m_err'); errEl.textContent = '';
+        if (!name) { errEl.textContent = '请填写表单名称'; return; }
+        if (!validatedKvFile) { errEl.textContent = '请上传 16:9 比例的 KV 图'; return; }
+        const btn = $('#m_ok'); btn.disabled = true; btn.textContent = '创建中…';
+        try {
+          const fd = new FormData();
+          fd.append('name', name);
+          fd.append('kv_image', validatedKvFile);
+          await api('/api/admin/forms', { method: 'POST', body: fd });
+          close();
+          route();
+        } catch (err) {
+          errEl.textContent = err.message;
+        } finally {
+          btn.disabled = false; btn.textContent = '创建';
+        }
+      });
+    }
+
+    /* ---------- 表单详情 ---------- */
+    async function renderFormDetail(app, id) {
+      app.innerHTML = `
+        <div class="topbar">
+          <div class="brand">云中阁 · 后台管理</div>
+          <div class="right"><button id="logoutBtn">退出登录</button></div>
+        </div>
+        <div class="wrap">
+          <p style="margin:0 0 14px"><a href="#/">← 返回列表</a></p>
+          <div id="detail"><div class="empty"><div class="spinner"></div> 加载中…</div></div>
+        </div>`;
+      $('#logoutBtn').addEventListener('click', logout);
+      try {
+        const form = await api(`/api/admin/forms/${id}`);
+        const sub = await api(`/api/admin/forms/${id}/submissions`);
+        renderDetail(form, sub.items || []);
+      } catch (err) {
+        if (err.status === 401) { logout(); return; }
+        $('#detail').innerHTML = `<div class="empty">加载失败：${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderDetail(form, items) {
+      $('#detail').innerHTML = `
+        <div class="panel">
+          <div class="panel-head">
+            <h2>${escapeHtml(form.name)}</h2>
+            <div class="toolbar">
+              <button class="btn btn-sm" id="copyLink">复制前端链接</button>
+              <button class="btn btn-sm" id="exportCsv">导出 CSV</button>
+              <button class="btn btn-sm btn-primary" id="exportZip">导出 ZIP（含照片）</button>
+            </div>
+          </div>
+          <div class="body" style="padding:20px">
+            <div class="stat">
+              <div class="item"><div class="num">${items.length}</div><div class="lbl">提交总数</div></div>
+              <div class="item"><div class="num">${escapeHtml(form.slug)}</div><div class="lbl">表单 slug</div></div>
+              <div class="item"><div class="num">${escapeHtml(form.created_at || '')}</div><div class="lbl">创建时间</div></div>
+            </div>
+            <label style="display:block;font-size:13px;color:#475569;margin:8px 0 6px;font-weight:500">前端访问链接</label>
+            <div class="slug-box">
+              <code id="pubUrl">${escapeHtml(location.origin + '/f/' + form.slug)}</code>
+              <button class="btn btn-sm" id="copyLink2">复制</button>
+            </div>
+            <div style="margin:18px 0 8px;font-size:13px;color:#475569;font-weight:500">KV 图</div>
+            ${form.kv_image_url ? `<img src="${escapeHtml(form.kv_image_url)}" style="max-width:100%;border-radius:8px;border:1px solid #e2e8f0" />` : '<div class="empty" style="padding:24px">未设置</div>'}
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:20px">
+          <div class="panel-head"><h2>提交记录（${items.length}）</h2></div>
+          <div class="sub-table">
+            <table>
+              <thead><tr>
+                <th>#</th><th>姓名</th><th>手机号</th><th>身份证号</th><th>银行卡号</th><th>开户行</th>
+                <th>身份证正面</th><th>身份证反面</th><th>职称证明</th><th>提交时间</th>
+              </tr></thead>
+              <tbody>
+                ${items.length ? items.map((s, i) => `
+                  <tr>
+                    <td>${i + 1}</td>
+                    <td>${escapeHtml(s.name)}</td>
+                    <td>${escapeHtml(s.phone)}</td>
+                    <td>${escapeHtml(s.id_card)}</td>
+                    <td>${escapeHtml(s.bank_card)}</td>
+                    <td>${escapeHtml(s.bank_name)}</td>
+                    <td>${imgCell(s.id_front_url)}</td>
+                    <td>${imgCell(s.id_back_url)}</td>
+                    <td>${imgCell(s.cert_url)}</td>
+                    <td>${escapeHtml(s.created_at)}</td>
+                  </tr>`).join('') : `<tr><td colspan="10"><div class="empty">暂无提交记录</div></td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+
+      const pubUrl = location.origin + '/f/' + form.slug;
+      const copy = async () => { try { await navigator.clipboard.writeText(pubUrl); toast('已复制：' + pubUrl); } catch { prompt('请复制：', pubUrl); } };
+      $('#copyLink')?.addEventListener('click', copy);
+      $('#copyLink2')?.addEventListener('click', copy);
+      $('#exportCsv')?.addEventListener('click', () => {
+        location.href = `/api/admin/forms/${form.id}/submissions?format=csv&token=${encodeURIComponent(getToken())}`;
+      });
+      $('#exportZip')?.addEventListener('click', async () => {
+        const btn = $('#exportZip');
+        const oldText = btn.textContent;
+        btn.disabled = true; btn.textContent = '打包中…';
+        try {
+          const res = await fetch(`/api/admin/forms/${form.id}/submissions?format=zip`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}));
+            throw new Error(d.error || '导出失败');
+          }
+          const blob = await res.blob();
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `submissions_${form.slug}.zip`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+        } catch (err) {
+          toast(err.message, true);
+        } finally {
+          btn.disabled = false; btn.textContent = oldText;
+        }
+      });
+      $$('.thumb').forEach(img => img.addEventListener('click', () => lightbox(img.src)));
+    }
+
+    function imgCell(url) {
+      return url ? `<img class="thumb" src="${escapeHtml(url)}" alt="图片" />` : '<span style="color:#cbd5e1">—</span>';
+    }
+
+    function lightbox(src) {
+      const lb = document.createElement('div');
+      lb.className = 'lightbox';
+      lb.innerHTML = `<img src="${escapeHtml(src)}" />`;
+      lb.addEventListener('click', () => lb.remove());
+      document.body.appendChild(lb);
+    }
+
+    /* toast */
+    let toastTimer;
+    function toast(msg) {
+      let el = $('#toast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'toast';
+        el.style.cssText = 'position:fixed;left:50%;top:24px;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .2s';
+        document.body.appendChild(el);
+      }
+      el.textContent = msg;
+      el.style.opacity = '1';
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.style.opacity = '0', 2400);
+    }
+
+    // 启动
+    route();
+  </script>
+</body>
+</html>

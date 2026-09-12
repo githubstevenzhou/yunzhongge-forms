@@ -1,0 +1,5 @@
+# 公开表单页 /f/<slug> 交给 SPA 处理（不带 200 状态的会返回 index.html 内容）
+/f/*    /f/  200
+
+# 后台单页，hash 路由
+/admin/*  /admin/  200

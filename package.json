@@ -1,0 +1,14 @@
+{
+  "name": "yunzhongge-forms",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler pages dev public --local-protocol=http --port 8788",
+    "deploy": "wrangler pages deploy public",
+    "db:init": "wrangler d1 execute yunzhongge-forms --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute yunzhongge-forms --local --file=./schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^3.60.0"
+  }
+}
