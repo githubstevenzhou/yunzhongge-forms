@@ -2,12 +2,14 @@ name = "yunzhongge-forms"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = "public"
 
-# 注意：D1 数据库、R2 存储桶、ADMIN_PASSWORD、JWT_SECRET 等绑定和密钥
-# 全部在 Cloudflare Pages 控制台 → Settings → Bindings / Environment variables 里配置，
-# 不写在这里，避免把密钥/占位符提交到公开仓库。
+[[d1_databases]]
+binding = "DB"
+database_name = "yunzhongge-forms"
+database_id = "cd9f793a-5a43-4a2b-a03d-e4affc30a2ca"
 
-# 本地开发时如需 D1/R2，请在控制台 → 你的 Pages 项目 → Settings → Functions →
-# D1 database bindings / R2 bucket bindings 添加：
-#   - D1 绑定变量名：DB
-#   - R2 绑定变量名：BUCKET
-# Pages 部署时会自动注入这些绑定。
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "yunzhongge-images"
+
+[vars]
+ADMIN_USERNAME = "admin"
