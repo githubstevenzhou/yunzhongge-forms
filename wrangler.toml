@@ -2,14 +2,5 @@ name = "yunzhongge-forms"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = "public"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "yunzhongge-forms"
-database_id = "cd9f793a-5a43-4a2b-a03d-e4affc30a2ca"
-
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "yunzhongge-images"
-
 [vars]
 ADMIN_USERNAME = "admin"
