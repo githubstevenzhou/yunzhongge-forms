@@ -4,3 +4,4 @@ pages_build_output_dir = "public"
 
 [vars]
 ADMIN_USERNAME = "admin"
+
