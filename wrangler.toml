@@ -2,12 +2,16 @@ name = "yunzhongge-forms"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = "public"
 
-# 注意：D1 数据库、R2 存储桶、ADMIN_PASSWORD、JWT_SECRET 等绑定和密钥
-# 全部在 Cloudflare Pages 控制台 → Settings → Bindings / Environment variables 里配置，
-# 不写在这里，避免把密钥/占位符提交到公开仓库。
+# D1 / R2 绑定必须写在这里，Cloudflare Pages 以本文件为准同步部署配置；
+# 只在控制台添加绑定会被下次部署覆盖掉（曾导致生产环境接口 500）。
+[[d1_databases]]
+binding = "DB"
+database_name = "yunzhongge-forms"
+database_id = "cb99793a-54a3-4a2b-a03d-e4affc30a2ca"
 
-# 本地开发时如需 D1/R2，请在控制台 → 你的 Pages 项目 → Settings → Functions →
-# D1 database bindings / R2 bucket bindings 添加：
-#   - D1 绑定变量名：DB
-#   - R2 绑定变量名：BUCKET
-# Pages 部署时会自动注入这些绑定。
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "yunzhongge-images"
+
+# ADMIN_PASSWORD、JWT_SECRET 等密钥仍在 Cloudflare Pages 控制台配置，不写进仓库。
+# 本地开发时如需连接同一套 D1/R2，执行 npx wrangler pages dev --d1=DB --r2=BUCKET。
