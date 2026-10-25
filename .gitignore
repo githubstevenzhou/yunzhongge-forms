@@ -1,0 +1,18 @@
+# 依赖
+node_modules/
+
+# Wrangler 本地状态（含本地 D1/R2 数据、密钥缓存）
+.wrangler/
+
+# 给本地下载用的打包文件，不要部署
+public/project.zip
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 日志
+*.log
+npm-debug.log*

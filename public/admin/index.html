@@ -88,6 +88,12 @@
     .stat .lbl{font-size:12px;color:#64748b;margin-top:2px}
     .slug-box{display:flex;align-items:center;gap:8px;background:#f1f5f9;padding:10px 14px;border-radius:8px;word-break:break-all}
     .slug-box code{font-family:monospace;font-size:13px;color:#1e293b;flex:1}
+    .pack-table{width:100%;border-collapse:collapse;font-size:13px}
+    .pack-table th,.pack-table td{padding:10px 8px;text-align:left;border-bottom:1px solid #e2e8f0;vertical-align:middle}
+    .pack-table th{color:#64748b;font-weight:500;background:#f8fafc}
+    .pack-table td.fn{font-family:monospace;color:#1e293b;word-break:break-all;max-width:340px}
+    .pack-table td.actions{display:flex;gap:6px;white-space:nowrap}
+    .pack-table td.actions a.btn,.pack-table td.actions button.btn{padding:5px 10px;font-size:12px}
 
     .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:flex;align-items:center;justify-content:center;padding:30px;cursor:zoom-out}
     .lightbox img{max-width:92%;max-height:92%;border-radius:8px}
@@ -365,7 +371,7 @@
             <div class="toolbar">
               <button class="btn btn-sm" id="copyLink">复制前端链接</button>
               <button class="btn btn-sm" id="exportCsv">导出 CSV</button>
-              <button class="btn btn-sm btn-primary" id="exportZip">导出 ZIP（含照片）</button>
+              <button class="btn btn-sm btn-primary" id="packBtn">立即打包</button>
             </div>
           </div>
           <div class="body" style="padding:20px">
@@ -381,6 +387,19 @@
             </div>
             <div style="margin:18px 0 8px;font-size:13px;color:#475569;font-weight:500">KV 图</div>
             ${form.kv_image_url ? `<img src="${escapeHtml(form.kv_image_url)}" style="max-width:100%;border-radius:8px;border:1px solid #e2e8f0" />` : '<div class="empty" style="padding:24px">未设置</div>'}
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:20px">
+          <div class="panel-head">
+            <h2>打包记录</h2>
+            <div class="toolbar">
+              <button class="btn btn-sm btn-primary" id="packBtn2">立即打包</button>
+              <button class="btn btn-sm" id="refreshPacks">刷新</button>
+            </div>
+          </div>
+          <div class="body" style="padding:12px 20px">
+            <div id="packListWrap"><div class="empty" style="padding:24px"><div class="spinner"></div> 加载中…</div></div>
           </div>
         </div>
 
@@ -418,37 +437,113 @@
       $('#exportCsv')?.addEventListener('click', () => {
         location.href = `/api/admin/forms/${form.id}/submissions?format=csv&token=${encodeURIComponent(getToken())}`;
       });
-      $('#exportZip')?.addEventListener('click', async () => {
-        const btn = $('#exportZip');
-        const oldText = btn.textContent;
-        btn.disabled = true; btn.textContent = '打包中…';
+
+      // ---------- 打包 & 打包列表 ----------
+      // 加载打包列表
+      async function loadPacks() {
+        const wrap = $('#packListWrap');
+        if (!wrap) return;
+        wrap.innerHTML = '<div class="empty" style="padding:24px"><div class="spinner"></div> 加载中…</div>';
         try {
-          const res = await fetch(`/api/admin/forms/${form.id}/submissions?format=zip`, {
-            headers: { Authorization: `Bearer ${getToken()}` },
-          });
-          if (!res.ok) {
-            const d = await res.json().catch(() => ({}));
-            throw new Error(d.error || '导出失败');
-          }
-          const blob = await res.blob();
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = `submissions_${form.slug}.zip`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+          const data = await api(`/api/admin/forms/${form.id}/packs`);
+          renderPacks(data.packs || []);
         } catch (err) {
-          toast(err.message, true);
-        } finally {
-          btn.disabled = false; btn.textContent = oldText;
+          wrap.innerHTML = `<div class="empty" style="padding:24px">加载失败：${escapeHtml(err.message)}</div>`;
         }
-      });
+      }
+
+      function fmtSize(b) {
+        if (b == null) return '-';
+        if (b < 1024) return b + ' B';
+        if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+        return (b / 1024 / 1024).toFixed(2) + ' MB';
+      }
+
+      // 把 D1 存储的 UTC 时间字符串按北京时间显示
+      function fmtTime(s) {
+        if (!s) return '-';
+        // D1 datetime('now') 形如 YYYY-MM-DD HH:MM:SS（UTC）
+        const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(String(s).trim());
+        if (!m) return String(s);
+        const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
+        // 转北京时间 +08:00
+        const p = (n) => String(n).padStart(2, '0');
+        const t = new Date(d.getTime() + 8 * 3600 * 1000);
+        return `${t.getUTCFullYear()}-${p(t.getUTCMonth() + 1)}-${p(t.getUTCDate())} ${p(t.getUTCHours())}:${p(t.getUTCMinutes())}:${p(t.getUTCSeconds())}`;
+      }
+
+      function renderPacks(packs) {
+        const wrap = $('#packListWrap');
+        if (!packs.length) {
+          wrap.innerHTML = '<div class="empty" style="padding:24px">尚无打包记录，点击「立即打包」生成一份压缩包</div>';
+          return;
+        }
+        wrap.innerHTML = `
+          <table class="pack-table">
+            <thead><tr>
+              <th>#</th><th>文件名</th><th>大小</th><th>包含记录</th><th>打包时间（北京）</th><th>操作</th>
+            </tr></thead>
+            <tbody>
+              ${packs.map((p, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td class="fn">${escapeHtml(p.file_name)}</td>
+                  <td>${fmtSize(p.size)}</td>
+                  <td>${p.submissions_count}</td>
+                  <td>${escapeHtml(fmtTime(p.created_at))}</td>
+                  <td class="actions">
+                    <a class="btn btn-sm btn-primary" href="/api/admin/forms/${form.id}/packs/${p.id}?token=${encodeURIComponent(getToken())}" download="${escapeHtml(p.file_name)}">下载</a>
+                    <button class="btn btn-sm btn-danger" data-del="${p.id}">删除</button>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>`;
+
+        wrap.querySelectorAll('[data-del]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.dataset.del;
+            if (!confirm('确定删除这份打包记录？R2 中的 zip 文件也会一并删除。')) return;
+            btn.disabled = true; btn.textContent = '删除中…';
+            try {
+              await api(`/api/admin/forms/${form.id}/packs/${id}`, { method: 'DELETE' });
+              toast('已删除');
+              loadPacks();
+            } catch (err) {
+              toast(err.message, true);
+              btn.disabled = false; btn.textContent = '删除';
+            }
+          });
+        });
+      }
+
+      // 触发打包
+      async function doPack() {
+        const btns = [$('#packBtn'), $('#packBtn2')].filter(Boolean);
+        const old = btns.map(b => b.textContent);
+        btns.forEach(b => { b.disabled = true; b.textContent = '打包中…（可能需 10-60 秒）'; });
+        try {
+          const data = await api(`/api/admin/forms/${form.id}/packs`, { method: 'POST' });
+          toast(`打包完成：${data.pack.file_name}（${fmtSize(data.pack.size)}）`);
+          loadPacks();
+        } catch (err) {
+          toast(err.message || '打包失败', true);
+        } finally {
+          btns.forEach((b, i) => { b.disabled = false; b.textContent = old[i]; });
+        }
+      }
+
+      $('#packBtn')?.addEventListener('click', doPack);
+      $('#packBtn2')?.addEventListener('click', doPack);
+      $('#refreshPacks')?.addEventListener('click', loadPacks);
+
+      loadPacks();
       $$('.thumb').forEach(img => img.addEventListener('click', () => lightbox(img.src)));
     }
 
     function imgCell(url) {
-      return url ? `<img class="thumb" src="${escapeHtml(url)}" alt="图片" />` : '<span style="color:#cbd5e1">—</span>';
+      // loading=lazy: 视口外图片不下载，减少初次加载数量
+      // decoding=async: 异步解码，不阻塞页面渲染
+      return url ? `<img class="thumb" src="${escapeHtml(url)}" alt="图片" loading="lazy" decoding="async" />` : '<span style="color:#cbd5e1">—</span>';
     }
 
     function lightbox(src) {
@@ -461,15 +556,16 @@
 
     /* toast */
     let toastTimer;
-    function toast(msg) {
+    function toast(msg, isErr = false) {
       let el = $('#toast');
       if (!el) {
         el = document.createElement('div');
         el.id = 'toast';
-        el.style.cssText = 'position:fixed;left:50%;top:24px;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .2s';
+        el.style.cssText = 'position:fixed;left:50%;top:24px;transform:translateX(-50%);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .2s';
         document.body.appendChild(el);
       }
       el.textContent = msg;
+      el.style.background = isErr ? '#ef4444' : '#1e293b';
       el.style.opacity = '1';
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => el.style.opacity = '0', 2400);

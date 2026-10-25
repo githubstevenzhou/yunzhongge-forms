@@ -36,6 +36,19 @@ export function isValidBankCard(s) {
   return /^\d{6,30}$/.test(String(s || '').replace(/\s+/g, ''));
 }
 
+// CSV 单元格转义（处理逗号、引号、换行）
+export function csvCell(v) {
+  const s = String(v == null ? '' : v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+// 长数字单元格按 Excel/WPS 文本公式输出，避免身份证/银行卡超过 15 位被转成数值、末位变 0
+export function csvTextCell(v) {
+  const s = String(v == null ? '' : v).trim();
+  if (!s) return '';
+  return `="${s.replace(/"/g, '""')}"`;
+}
+
 // 从 Authorization 头或 query token 中读取 JWT
 export function readToken(request, url) {
   const h = request.headers.get('Authorization') || request.headers.get('authorization') || '';

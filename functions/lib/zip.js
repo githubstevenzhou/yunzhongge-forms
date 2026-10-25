@@ -95,6 +95,83 @@ export function buildZip(files) {
   );
 }
 
+// 流式 ZIP：返回 Blob + 预计算总大小（Content-Length 可用）
+// 通过将每个文件分成独立 chunk，浏览器接收时直接写入磁盘，避免 Workers 内拼接大块内存
+export function buildZipStream(files) {
+  const chunks = [];  // 数组：[Uint8Array, Uint8Array, ...]
+  const centralEntries = []; // [{ nameBytes, crc, size, offset }]
+  let offset = 0;
+
+  for (const f of files) {
+    const nameBytes = new TextEncoder().encode(f.name);
+    const crc = crc32(f.data);
+    const size = f.data.length;
+
+    // 本地文件头
+    const localHeader = [
+      0x50, 0x4b, 0x03, 0x04,
+      ...u16(20),
+      ...u16(0x0800),
+      ...u16(0),
+      ...u16(0), ...u16(0),
+      ...u32(crc),
+      ...u32(size),
+      ...u32(size),
+      ...u16(nameBytes.length),
+      ...u16(0),
+    ];
+    chunks.push(new Uint8Array(localHeader));
+    chunks.push(nameBytes);
+    chunks.push(f.data);
+
+    centralEntries.push({ nameBytes, crc, size, offset });
+    offset += localHeader.length + nameBytes.length + size;
+  }
+
+  // 中央目录
+  const centralStartOffset = offset;
+  for (const e of centralEntries) {
+    const centralHeader = [
+      0x50, 0x4b, 0x01, 0x02,
+      ...u16(20),
+      ...u16(20),
+      ...u16(0x0800),
+      ...u16(0),
+      ...u16(0), ...u16(0),
+      ...u32(e.crc),
+      ...u32(e.size),
+      ...u32(e.size),
+      ...u16(e.nameBytes.length),
+      ...u16(0),
+      ...u16(0),
+      ...u16(0),
+      ...u16(0),
+      ...u32(0),
+      ...u32(e.offset),
+    ];
+    chunks.push(new Uint8Array(centralHeader));
+    chunks.push(e.nameBytes);
+    offset += centralHeader.length + e.nameBytes.length;
+  }
+
+  const centralSize = offset - centralStartOffset;
+
+  // 结束记录
+  const endRecord = [
+    0x50, 0x4b, 0x05, 0x06,
+    ...u16(0), ...u16(0),
+    ...u16(files.length), ...u16(files.length),
+    ...u32(centralSize),
+    ...u32(centralStartOffset),
+    ...u16(0),
+  ];
+  chunks.push(new Uint8Array(endRecord));
+  offset += endRecord.length;
+
+  const blob = new Blob(chunks, { type: 'application/zip' });
+  return { blob, size: offset };
+}
+
 // 把文件名里的非法字符替换掉，避免 ZIP 内路径出错
 export function safeName(s) {
   return String(s == null ? 'unknown' : s)
